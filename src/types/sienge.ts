@@ -1,107 +1,236 @@
-// Tipos para a API do Sienge
+// Tipos baseados na documentação oficial da API do Sienge
+// https://api.sienge.com.br/docs/#/bill-debt-v1
 
 export interface SiengeAuth {
-  token: string;
-  expiresAt: string;
-  userId: string;
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  scope: string;
 }
 
 export interface SiengeConfig {
   baseUrl: string;
-  apiKey: string;
+  clientId: string;
+  clientSecret: string;
   timeout: number;
 }
 
-export interface Fornecedor {
+// Tipos para Contas a Pagar (Bill Debt)
+export interface BillDebt {
   id: number;
-  codigo: string;
-  nome: string;
-  cnpjCpf: string;
+  code: string;
+  description: string;
+  amount: number;
+  dueDate: string;
+  paymentDate?: string;
+  status: 'PENDING' | 'PAID' | 'OVERDUE' | 'CANCELLED';
+  supplier: {
+    id: number;
+    name: string;
+    document: string;
+  };
+  costCenter: {
+    id: number;
+    code: string;
+    name: string;
+  };
+  category?: {
+    id: number;
+    name: string;
+  };
+  observations?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Tipos para Contas a Receber (Bill Credit)
+export interface BillCredit {
+  id: number;
+  code: string;
+  description: string;
+  amount: number;
+  dueDate: string;
+  paymentDate?: string;
+  status: 'PENDING' | 'PAID' | 'OVERDUE' | 'CANCELLED';
+  customer: {
+    id: number;
+    name: string;
+    document: string;
+  };
+  costCenter: {
+    id: number;
+    code: string;
+    name: string;
+  };
+  category?: {
+    id: number;
+    name: string;
+  };
+  observations?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Tipos para Fornecedores (Suppliers)
+export interface Supplier {
+  id: number;
+  code: string;
+  name: string;
+  document: string;
   email?: string;
-  telefone?: string;
-  endereco?: {
-    logradouro: string;
-    numero: string;
-    complemento?: string;
-    bairro: string;
-    cidade: string;
-    estado: string;
-    cep: string;
+  phone?: string;
+  address?: {
+    street: string;
+    number: string;
+    complement?: string;
+    neighborhood: string;
+    city: string;
+    state: string;
+    zipCode: string;
   };
-  ativo: boolean;
-  dataCadastro: string;
-  dataAtualizacao: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface CentroCusto {
+// Tipos para Centros de Custo (Cost Centers)
+export interface CostCenter {
   id: number;
-  codigo: string;
-  nome: string;
-  descricao?: string;
-  ativo: boolean;
-  centroCustoPai?: {
+  code: string;
+  name: string;
+  description?: string;
+  active: boolean;
+  parentCostCenter?: {
     id: number;
-    codigo: string;
-    nome: string;
+    code: string;
+    name: string;
   };
-  dataCadastro: string;
-  dataAtualizacao: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface LancamentoFinanceiro {
+// Tipos para Categorias
+export interface Category {
   id: number;
-  codigo: string;
-  tipo: 'receita' | 'despesa';
-  descricao: string;
-  valor: number;
-  dataVencimento: string;
-  dataPagamento?: string;
-  status: 'pendente' | 'pago' | 'vencido' | 'cancelado';
-  fornecedor: {
-    id: number;
-    nome: string;
-    cnpjCpf: string;
-  };
-  centroCusto: {
-    id: number;
-    codigo: string;
-    nome: string;
-  };
-  categoria?: {
-    id: number;
-    nome: string;
-  };
-  observacoes?: string;
-  dataCadastro: string;
-  dataAtualizacao: string;
+  code: string;
+  name: string;
+  description?: string;
+  active: boolean;
+  type: 'EXPENSE' | 'REVENUE';
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface Pagamento {
+// Tipos para Pagamentos
+export interface Payment {
   id: number;
-  lancamentoId: number;
-  valor: number;
-  dataPagamento: string;
-  formaPagamento: string;
-  numeroDocumento?: string;
-  observacoes?: string;
-  dataCadastro: string;
+  billId: number;
+  amount: number;
+  paymentDate: string;
+  paymentMethod: string;
+  documentNumber?: string;
+  observations?: string;
+  createdAt: string;
 }
 
+// Tipos para Recebimentos
+export interface Receipt {
+  id: number;
+  billId: number;
+  amount: number;
+  receiptDate: string;
+  receiptMethod: string;
+  documentNumber?: string;
+  observations?: string;
+  createdAt: string;
+}
+
+// Tipos para Filtros de busca
+export interface BillDebtFilters {
+  page?: number;
+  size?: number;
+  status?: string;
+  dueDateFrom?: string;
+  dueDateTo?: string;
+  supplierId?: number;
+  costCenterId?: number;
+  categoryId?: number;
+  amountFrom?: number;
+  amountTo?: number;
+}
+
+export interface BillCreditFilters {
+  page?: number;
+  size?: number;
+  status?: string;
+  dueDateFrom?: string;
+  dueDateTo?: string;
+  customerId?: number;
+  costCenterId?: number;
+  categoryId?: number;
+  amountFrom?: number;
+  amountTo?: number;
+}
+
+export interface SupplierFilters {
+  page?: number;
+  size?: number;
+  active?: boolean;
+  search?: string;
+}
+
+export interface CostCenterFilters {
+  page?: number;
+  size?: number;
+  active?: boolean;
+  search?: string;
+}
+
+// Respostas da API
 export interface ApiResponse<T> {
-  success: boolean;
-  data: T;
-  message?: string;
-  errors?: string[];
-  pagination?: {
-    page: number;
+  content: T[];
+  pageable: {
+    pageNumber: number;
     pageSize: number;
-    total: number;
-    totalPages: number;
+    sort: {
+      empty: boolean;
+      sorted: boolean;
+      unsorted: boolean;
+    };
   };
+  totalElements: number;
+  totalPages: number;
+  last: boolean;
+  first: boolean;
+  numberOfElements: number;
+  size: number;
+  number: number;
+  sort: {
+    empty: boolean;
+    sorted: boolean;
+    unsorted: boolean;
+  };
+  empty: boolean;
 }
 
 export interface ApiError {
+  timestamp: string;
+  status: number;
+  error: string;
   message: string;
-  code: string;
-  details?: any;
+  path: string;
+}
+
+// Estatísticas
+export interface FinancialStats {
+  totalReceivables: number;
+  totalPayables: number;
+  pendingReceivables: number;
+  pendingPayables: number;
+  overdueReceivables: number;
+  overduePayables: number;
+  totalPayments: number;
+  totalReceipts: number;
+  averagePaymentAmount: number;
+  averageReceiptAmount: number;
 }

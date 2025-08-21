@@ -1,9 +1,26 @@
-import { siengeConfig, siengeEndpoints, getDefaultHeaders, validateSiengeConfig } from './sienge-config';
-import { ApiResponse, ApiError, SiengeAuth } from '../types/sienge';
+import { siengeConfig, siengeEndpoints, getDefaultHeaders, getAuthHeaders, getOAuth2Config, validateSiengeConfig } from './sienge-config';
+import { 
+  ApiResponse, 
+  ApiError, 
+  SiengeAuth, 
+  BillDebt, 
+  BillCredit, 
+  Supplier, 
+  CostCenter, 
+  Category,
+  Payment,
+  Receipt,
+  BillDebtFilters,
+  BillCreditFilters,
+  SupplierFilters,
+  CostCenterFilters
+} from '../types/sienge';
 
 class SiengeApiClient {
   private baseUrl: string;
   private timeout: number;
+  private accessToken: string | null = null;
+  private tokenExpiry: number | null = null;
 
   constructor() {
     if (!validateSiengeConfig()) {
@@ -17,19 +34,25 @@ class SiengeApiClient {
   private async request<T>(
     endpoint: string,
     options: RequestInit = {},
-    token?: string
-  ): Promise<ApiResponse<T>> {
+    requireAuth: boolean = true
+  ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
     try {
+      // Verificar se precisa renovar o token
+      if (requireAuth && this.shouldRefreshToken()) {
+        await this.authenticate();
+      }
+
+      const headers = requireAuth && this.accessToken 
+        ? { ...getDefaultHeaders(this.accessToken), ...options.headers }
+        : { ...getDefaultHeaders(), ...options.headers };
+
       const response = await fetch(url, {
         ...options,
-        headers: {
-          ...getDefaultHeaders(token),
-          ...options.headers,
-        },
+        headers,
         signal: controller.signal,
       });
 
@@ -56,112 +79,195 @@ class SiengeApiClient {
     }
   }
 
-  // Autenticação
-  async authenticate(username: string, password: string): Promise<SiengeAuth> {
+  private shouldRefreshToken(): boolean {
+    if (!this.accessToken || !this.tokenExpiry) return true;
+    
+    // Renovar token 5 minutos antes da expiração
+    const now = Date.now();
+    const refreshTime = this.tokenExpiry - (5 * 60 * 1000);
+    
+    return now >= refreshTime;
+  }
+
+  // Autenticação OAuth2
+  async authenticate(): Promise<SiengeAuth> {
+    const oauthConfig = getOAuth2Config();
+    const formData = new URLSearchParams();
+    
+    Object.entries(oauthConfig).forEach(([key, value]) => {
+      formData.append(key, value);
+    });
+
     const response = await this.request<SiengeAuth>(siengeEndpoints.auth, {
       method: 'POST',
-      body: JSON.stringify({ username, password }),
-    });
+      headers: getAuthHeaders(),
+      body: formData,
+    }, false);
+
+    // Armazenar token e calcular expiração
+    this.accessToken = response.access_token;
+    this.tokenExpiry = Date.now() + (response.expires_in * 1000);
     
-    return response.data;
+    return response;
   }
 
-  // Fornecedores
-  async getFornecedores(token: string, params?: {
-    page?: number;
-    pageSize?: number;
-    ativo?: boolean;
-    search?: string;
-  }): Promise<ApiResponse<any[]>> {
+  // Contas a Pagar (Bill Debt)
+  async getBillDebts(filters?: BillDebtFilters): Promise<ApiResponse<BillDebt>> {
     const queryParams = new URLSearchParams();
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.pageSize) queryParams.append('pageSize', params.pageSize.toString());
-    if (params?.ativo !== undefined) queryParams.append('ativo', params.ativo.toString());
-    if (params?.search) queryParams.append('search', params.search);
+    
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
 
-    const endpoint = `${siengeEndpoints.fornecedores}?${queryParams.toString()}`;
-    return this.request<any[]>(endpoint, { method: 'GET' }, token);
+    const endpoint = `${siengeEndpoints.billDebts}?${queryParams.toString()}`;
+    return this.request<ApiResponse<BillDebt>>(endpoint, { method: 'GET' });
   }
 
-  async getFornecedor(token: string, id: number): Promise<ApiResponse<any>> {
-    const endpoint = `${siengeEndpoints.fornecedores}/${id}`;
-    return this.request<any>(endpoint, { method: 'GET' }, token);
+  async getBillDebt(id: number): Promise<BillDebt> {
+    const endpoint = siengeEndpoints.billDebt(id);
+    return this.request<BillDebt>(endpoint, { method: 'GET' });
   }
 
-  // Centros de Custo
-  async getCentrosCusto(token: string, params?: {
-    page?: number;
-    pageSize?: number;
-    ativo?: boolean;
-    search?: string;
-  }): Promise<ApiResponse<any[]>> {
+  // Contas a Receber (Bill Credit)
+  async getBillCredits(filters?: BillCreditFilters): Promise<ApiResponse<BillCredit>> {
     const queryParams = new URLSearchParams();
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.pageSize) queryParams.append('pageSize', params.pageSize.toString());
-    if (params?.ativo !== undefined) queryParams.append('ativo', params.ativo.toString());
-    if (params?.search) queryParams.append('search', params.search);
+    
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
 
-    const endpoint = `${siengeEndpoints.centrosCusto}?${queryParams.toString()}`;
-    return this.request<any[]>(endpoint, { method: 'GET' }, token);
+    const endpoint = `${siengeEndpoints.billCredits}?${queryParams.toString()}`;
+    return this.request<ApiResponse<BillCredit>>(endpoint, { method: 'GET' });
   }
 
-  async getCentroCusto(token: string, id: number): Promise<ApiResponse<any>> {
-    const endpoint = `${siengeEndpoints.centrosCusto}/${id}`;
-    return this.request<any>(endpoint, { method: 'GET' }, token);
+  async getBillCredit(id: number): Promise<BillCredit> {
+    const endpoint = siengeEndpoints.billCredit(id);
+    return this.request<BillCredit>(endpoint, { method: 'GET' });
   }
 
-  // Lançamentos Financeiros
-  async getLancamentos(token: string, params?: {
-    page?: number;
-    pageSize?: number;
-    tipo?: 'receita' | 'despesa';
-    status?: string;
-    dataInicio?: string;
-    dataFim?: string;
-    fornecedorId?: number;
-    centroCustoId?: number;
-  }): Promise<ApiResponse<any[]>> {
+  // Fornecedores (Suppliers)
+  async getSuppliers(filters?: SupplierFilters): Promise<ApiResponse<Supplier>> {
     const queryParams = new URLSearchParams();
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.pageSize) queryParams.append('pageSize', params.pageSize.toString());
-    if (params?.tipo) queryParams.append('tipo', params.tipo);
-    if (params?.status) queryParams.append('status', params.status);
-    if (params?.dataInicio) queryParams.append('dataInicio', params.dataInicio);
-    if (params?.dataFim) queryParams.append('dataFim', params.dataFim);
-    if (params?.fornecedorId) queryParams.append('fornecedorId', params.fornecedorId.toString());
-    if (params?.centroCustoId) queryParams.append('centroCustoId', params.centroCustoId.toString());
+    
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
 
-    const endpoint = `${siengeEndpoints.lancamentos}?${queryParams.toString()}`;
-    return this.request<any[]>(endpoint, { method: 'GET' }, token);
+    const endpoint = `${siengeEndpoints.suppliers}?${queryParams.toString()}`;
+    return this.request<ApiResponse<Supplier>>(endpoint, { method: 'GET' });
   }
 
-  async getLancamento(token: string, id: number): Promise<ApiResponse<any>> {
-    const endpoint = `${siengeEndpoints.lancamentos}/${id}`;
-    return this.request<any>(endpoint, { method: 'GET' }, token);
+  async getSupplier(id: number): Promise<Supplier> {
+    const endpoint = siengeEndpoints.supplier(id);
+    return this.request<Supplier>(endpoint, { method: 'GET' });
+  }
+
+  // Centros de Custo (Cost Centers)
+  async getCostCenters(filters?: CostCenterFilters): Promise<ApiResponse<CostCenter>> {
+    const queryParams = new URLSearchParams();
+    
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+
+    const endpoint = `${siengeEndpoints.costCenters}?${queryParams.toString()}`;
+    return this.request<ApiResponse<CostCenter>>(endpoint, { method: 'GET' });
+  }
+
+  async getCostCenter(id: number): Promise<CostCenter> {
+    const endpoint = siengeEndpoints.costCenter(id);
+    return this.request<CostCenter>(endpoint, { method: 'GET' });
+  }
+
+  // Categorias
+  async getCategories(): Promise<ApiResponse<Category>> {
+    const endpoint = siengeEndpoints.categories;
+    return this.request<ApiResponse<Category>>(endpoint, { method: 'GET' });
+  }
+
+  async getCategory(id: number): Promise<Category> {
+    const endpoint = siengeEndpoints.category(id);
+    return this.request<Category>(endpoint, { method: 'GET' });
   }
 
   // Pagamentos
-  async getPagamentos(token: string, params?: {
+  async getPayments(filters?: {
     page?: number;
-    pageSize?: number;
-    dataInicio?: string;
-    dataFim?: string;
-    lancamentoId?: number;
-  }): Promise<ApiResponse<any[]>> {
+    size?: number;
+    billId?: number;
+    paymentDateFrom?: string;
+    paymentDateTo?: string;
+  }): Promise<ApiResponse<Payment>> {
     const queryParams = new URLSearchParams();
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.pageSize) queryParams.append('pageSize', params.pageSize.toString());
-    if (params?.dataInicio) queryParams.append('dataInicio', params.dataInicio);
-    if (params?.dataFim) queryParams.append('dataFim', params.dataFim);
-    if (params?.lancamentoId) queryParams.append('lancamentoId', params.lancamentoId.toString());
+    
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
 
-    const endpoint = `${siengeEndpoints.pagamentos}?${queryParams.toString()}`;
-    return this.request<any[]>(endpoint, { method: 'GET' }, token);
+    const endpoint = `${siengeEndpoints.payments}?${queryParams.toString()}`;
+    return this.request<ApiResponse<Payment>>(endpoint, { method: 'GET' });
   }
 
-  async getPagamento(token: string, id: number): Promise<ApiResponse<any>> {
-    const endpoint = `${siengeEndpoints.pagamentos}/${id}`;
-    return this.request<any>(endpoint, { method: 'GET' }, token);
+  async getPayment(id: number): Promise<Payment> {
+    const endpoint = siengeEndpoints.payment(id);
+    return this.request<Payment>(endpoint, { method: 'GET' });
+  }
+
+  // Recebimentos
+  async getReceipts(filters?: {
+    page?: number;
+    size?: number;
+    billId?: number;
+    receiptDateFrom?: string;
+    receiptDateTo?: string;
+  }): Promise<ApiResponse<Receipt>> {
+    const queryParams = new URLSearchParams();
+    
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+
+    const endpoint = `${siengeEndpoints.receipts}?${queryParams.toString()}`;
+    return this.request<ApiResponse<Receipt>>(endpoint, { method: 'GET' });
+  }
+
+  async getReceipt(id: number): Promise<Receipt> {
+    const endpoint = siengeEndpoints.receipt(id);
+    return this.request<Receipt>(endpoint, { method: 'GET' });
+  }
+
+  // Método para verificar se está autenticado
+  isAuthenticated(): boolean {
+    return !!this.accessToken && !this.shouldRefreshToken();
+  }
+
+  // Método para obter o token atual
+  getCurrentToken(): string | null {
+    return this.accessToken;
   }
 }
 
