@@ -109,7 +109,7 @@ export async function importCostsFromSheet(worksheet: XLSX.WorkSheet, typeHint: 
       bookedYear,
       realizedYTD,
       notes,
-      costCenter,
+      costCenterLegacy: costCenter,
       glAccount,
       project,
       tags,

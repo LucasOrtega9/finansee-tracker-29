@@ -7,6 +7,15 @@ export interface Vendor {
   createdAt: Date;
 }
 
+export interface CostCenter {
+  id: string;
+  name: string;
+  code: string;
+  type: CostType;
+  description?: string;
+  createdAt: Date;
+}
+
 export interface Budget {
   id: string;
   year: number;
@@ -19,6 +28,8 @@ export interface Cost {
   id: string;
   vendorId: string;
   vendor?: Vendor;
+  costCenterId?: string;
+  costCenter?: CostCenter;
   type: CostType;
   contract?: string;
   monthlyValue: number;
@@ -28,7 +39,7 @@ export interface Cost {
   bookedYear: number;
   realizedYTD: number;
   notes?: string;
-  costCenter?: string;
+  costCenterLegacy?: string;
   glAccount?: string;
   project?: string;
   tags: string[];

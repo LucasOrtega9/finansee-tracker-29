@@ -7,6 +7,7 @@ import Dashboard from "./pages/Dashboard";
 import Costs from "./pages/Costs";
 import Budgets from "./pages/Budgets";
 import Vendors from "./pages/Vendors";
+import CostCenters from "./pages/CostCenters";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,11 @@ function Layout({ children }: { children: React.ReactNode }) {
               }>
                 Fornecedores
               </NavLink>
+              <NavLink to="/cost-centers" className={({ isActive }) => 
+                `hover:text-primary transition-colors ${isActive ? 'text-primary font-medium' : 'text-muted-foreground'}`
+              }>
+                Centros de Custo
+              </NavLink>
             </nav>
           </div>
         </div>
@@ -60,6 +66,7 @@ const App = () => (
             <Route path="/costs" element={<Costs />} />
             <Route path="/budgets" element={<Budgets />} />
             <Route path="/vendors" element={<Vendors />} />
+            <Route path="/cost-centers" element={<CostCenters />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>

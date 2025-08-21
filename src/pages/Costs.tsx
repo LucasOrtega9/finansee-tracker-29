@@ -192,7 +192,7 @@ export default function Costs() {
                   <th className="text-left py-3 px-2">Anual</th>
                   <th className="text-left py-3 px-2">Total Período</th>
                   <th className="text-left py-3 px-2">Ano</th>
-                  <th className="text-left py-3 px-2">CC</th>
+                  <th className="text-left py-3 px-2">Centro de Custo</th>
                   <th className="text-left py-3 px-2">GL</th>
                   <th className="text-left py-3 px-2">Projeto</th>
                   <th className="text-left py-3 px-2">Ações</th>
@@ -221,7 +221,7 @@ export default function Costs() {
                       <td className="py-3 px-2 font-medium">{formatCurrency(cost.annualValue)}</td>
                       <td className="py-3 px-2 font-medium text-primary">{formatCurrency(totalPeriod)}</td>
                       <td className="py-3 px-2">{cost.bookedYear}</td>
-                      <td className="py-3 px-2">{cost.costCenter || '-'}</td>
+                      <td className="py-3 px-2">{cost.costCenter?.name || cost.costCenterLegacy || '-'}</td>
                       <td className="py-3 px-2">{cost.glAccount || '-'}</td>
                       <td className="py-3 px-2">{cost.project || '-'}</td>
                     <td className="py-3 px-2">

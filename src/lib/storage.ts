@@ -1,9 +1,10 @@
-import { Cost, Vendor, Budget, CostType } from '@/types';
+import { Cost, Vendor, Budget, CostType, CostCenter } from '@/types';
 
 const STORAGE_KEYS = {
   COSTS: 'capex_opex_costs',
   VENDORS: 'capex_opex_vendors',
   BUDGETS: 'capex_opex_budgets',
+  COST_CENTERS: 'capex_opex_cost_centers',
 };
 
 function generateId(): string {
@@ -58,6 +59,63 @@ export function deleteVendor(id: string): boolean {
   return true;
 }
 
+// Cost Centers
+export function getCostCenters(type?: CostType): CostCenter[] {
+  const data = localStorage.getItem(STORAGE_KEYS.COST_CENTERS);
+  let costCenters: CostCenter[] = data ? JSON.parse(data).map((cc: any) => ({
+    ...cc,
+    createdAt: new Date(cc.createdAt),
+  })) : [];
+
+  if (type) {
+    costCenters = costCenters.filter(cc => cc.type === type);
+  }
+
+  return costCenters.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export function saveCostCenter(costCenter: Omit<CostCenter, 'id' | 'createdAt'>): CostCenter {
+  const costCenters = getCostCenters();
+  const existing = costCenters.find(cc => cc.code === costCenter.code);
+  
+  if (existing) return existing;
+  
+  const newCostCenter: CostCenter = {
+    id: generateId(),
+    ...costCenter,
+    createdAt: new Date(),
+  };
+  
+  costCenters.push(newCostCenter);
+  localStorage.setItem(STORAGE_KEYS.COST_CENTERS, JSON.stringify(costCenters));
+  return newCostCenter;
+}
+
+export function updateCostCenter(id: string, updates: Partial<CostCenter>): CostCenter | null {
+  const costCenters = getCostCenters();
+  const index = costCenters.findIndex(cc => cc.id === id);
+  
+  if (index === -1) return null;
+  
+  costCenters[index] = {
+    ...costCenters[index],
+    ...updates,
+  };
+  
+  localStorage.setItem(STORAGE_KEYS.COST_CENTERS, JSON.stringify(costCenters));
+  return costCenters[index];
+}
+
+export function deleteCostCenter(id: string): boolean {
+  const costCenters = getCostCenters();
+  const filtered = costCenters.filter(cc => cc.id !== id);
+  
+  if (filtered.length === costCenters.length) return false;
+  
+  localStorage.setItem(STORAGE_KEYS.COST_CENTERS, JSON.stringify(filtered));
+  return true;
+}
+
 // Costs
 export function getCosts(filters?: { 
   year?: number; 
@@ -74,9 +132,11 @@ export function getCosts(filters?: {
   })) : [];
 
   const vendors = getVendors();
+  const costCenters = getCostCenters();
   costs = costs.map(cost => ({
     ...cost,
     vendor: vendors.find(v => v.id === cost.vendorId),
+    costCenter: cost.costCenterId ? costCenters.find(cc => cc.id === cost.costCenterId) : undefined,
   }));
 
   if (filters?.year) {
@@ -94,7 +154,9 @@ export function getCosts(filters?: {
       c.contract?.toLowerCase().includes(search) ||
       c.notes?.toLowerCase().includes(search) ||
       c.project?.toLowerCase().includes(search) ||
-      c.costCenter?.toLowerCase().includes(search) ||
+      c.costCenterLegacy?.toLowerCase().includes(search) ||
+      c.costCenter?.name?.toLowerCase().includes(search) ||
+      c.costCenter?.code?.toLowerCase().includes(search) ||
       c.glAccount?.toLowerCase().includes(search)
     );
   }

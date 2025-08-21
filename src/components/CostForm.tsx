@@ -5,8 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Cost, CostType, Vendor } from '@/types';
-import { saveCost, updateCost, saveVendor, getVendors } from '@/lib/storage';
+import { Cost, CostType, Vendor, CostCenter } from '@/types';
+import { saveCost, updateCost, saveVendor, getVendors, getCostCenters } from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
 import { differenceInMonths, parseISO } from 'date-fns';
 
@@ -20,10 +20,12 @@ export function CostForm({ initialData, onSuccess, onCancel }: CostFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
   
   const [formData, setFormData] = useState({
     vendorId: '',
     vendorName: '',
+    costCenterId: '',
     type: 'OPEX' as CostType,
     contract: '',
     monthlyValue: 0,
@@ -34,7 +36,7 @@ export function CostForm({ initialData, onSuccess, onCancel }: CostFormProps) {
     bookedYear: new Date().getFullYear(),
     realizedYTD: 0,
     notes: '',
-    costCenter: '',
+    costCenterLegacy: '',
     glAccount: '',
     project: '',
     tags: '',
@@ -42,13 +44,24 @@ export function CostForm({ initialData, onSuccess, onCancel }: CostFormProps) {
 
   useEffect(() => {
     setVendors(getVendors());
+    loadCostCenters();
   }, []);
+
+  const loadCostCenters = () => {
+    setCostCenters(getCostCenters());
+  };
+
+  useEffect(() => {
+    // Update cost centers when type changes
+    loadCostCenters();
+  }, [formData.type]);
 
   useEffect(() => {
     if (initialData) {
       setFormData({
         vendorId: initialData.vendorId,
         vendorName: initialData.vendor?.name || '',
+        costCenterId: initialData.costCenterId || '',
         type: initialData.type,
         contract: initialData.contract || '',
         monthlyValue: initialData.monthlyValue,
@@ -59,7 +72,7 @@ export function CostForm({ initialData, onSuccess, onCancel }: CostFormProps) {
         bookedYear: initialData.bookedYear,
         realizedYTD: initialData.realizedYTD,
         notes: initialData.notes || '',
-        costCenter: initialData.costCenter || '',
+        costCenterLegacy: initialData.costCenterLegacy || '',
         glAccount: initialData.glAccount || '',
         project: initialData.project || '',
         tags: initialData.tags.join(', '),
@@ -106,6 +119,7 @@ export function CostForm({ initialData, onSuccess, onCancel }: CostFormProps) {
       const costData = {
         vendorId,
         type: formData.type,
+        costCenterId: formData.costCenterId || undefined,
         contract: formData.contract || undefined,
         monthlyValue: formData.monthlyValue,
         annualValue: formData.annualValue ? Number(formData.annualValue) : formData.monthlyValue * 12,
@@ -114,7 +128,7 @@ export function CostForm({ initialData, onSuccess, onCancel }: CostFormProps) {
         bookedYear: formData.bookedYear,
         realizedYTD: formData.realizedYTD,
         notes: formData.notes || undefined,
-        costCenter: formData.costCenter || undefined,
+        costCenterLegacy: formData.costCenterLegacy || undefined,
         glAccount: formData.glAccount || undefined,
         project: formData.project || undefined,
         tags: formData.tags.split(/[;,]/).map(s => s.trim()).filter(Boolean),
@@ -209,6 +223,33 @@ export function CostForm({ initialData, onSuccess, onCancel }: CostFormProps) {
             </div>
             
             <div>
+              <Label htmlFor="costCenter">Centro de Custo</Label>
+              <Select 
+                value={formData.costCenterId || 'none'} 
+                onValueChange={(value) => handleInputChange('costCenterId', value === 'none' ? '' : value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um centro de custo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum</SelectItem>
+                  {costCenters
+                    .filter(cc => cc.type === formData.type)
+                    .map(costCenter => (
+                      <SelectItem key={costCenter.id} value={costCenter.id}>
+                        {costCenter.code} - {costCenter.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              {costCenters.filter(cc => cc.type === formData.type).length === 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Nenhum centro {formData.type} cadastrado
+                </p>
+              )}
+            </div>
+            
+            <div>
               <Label htmlFor="contract">Contrato</Label>
               <Input
                 id="contract"
@@ -300,11 +341,12 @@ export function CostForm({ initialData, onSuccess, onCancel }: CostFormProps) {
             </div>
             
             <div>
-              <Label htmlFor="costCenter">Centro de Custo</Label>
+              <Label htmlFor="costCenterLegacy">Centro de Custo (Legacy)</Label>
               <Input
-                id="costCenter"
-                value={formData.costCenter}
-                onChange={(e) => handleInputChange('costCenter', e.target.value)}
+                id="costCenterLegacy"
+                value={formData.costCenterLegacy}
+                onChange={(e) => handleInputChange('costCenterLegacy', e.target.value)}
+                placeholder="CC antigo (texto livre)"
               />
             </div>
             
