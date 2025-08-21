@@ -3,6 +3,7 @@ export type CostType = 'OPEX' | 'CAPEX';
 export interface Vendor {
   id: string;
   name: string;
+  cpf?: string;
   createdAt: Date;
 }
 

@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import Costs from "./pages/Costs";
 import Budgets from "./pages/Budgets";
+import Vendors from "./pages/Vendors";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,11 @@ function Layout({ children }: { children: React.ReactNode }) {
               }>
                 Orçamentos
               </NavLink>
+              <NavLink to="/vendors" className={({ isActive }) => 
+                `hover:text-primary transition-colors ${isActive ? 'text-primary font-medium' : 'text-muted-foreground'}`
+              }>
+                Fornecedores
+              </NavLink>
             </nav>
           </div>
         </div>
@@ -53,6 +59,7 @@ const App = () => (
             <Route path="/" element={<Dashboard />} />
             <Route path="/costs" element={<Costs />} />
             <Route path="/budgets" element={<Budgets />} />
+            <Route path="/vendors" element={<Vendors />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>

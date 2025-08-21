@@ -33,6 +33,31 @@ export function saveVendor(vendor: Omit<Vendor, 'id' | 'createdAt'>): Vendor {
   return newVendor;
 }
 
+export function updateVendor(id: string, updates: Partial<Vendor>): Vendor | null {
+  const vendors = getVendors();
+  const index = vendors.findIndex(v => v.id === id);
+  
+  if (index === -1) return null;
+  
+  vendors[index] = {
+    ...vendors[index],
+    ...updates,
+  };
+  
+  localStorage.setItem(STORAGE_KEYS.VENDORS, JSON.stringify(vendors));
+  return vendors[index];
+}
+
+export function deleteVendor(id: string): boolean {
+  const vendors = getVendors();
+  const filtered = vendors.filter(v => v.id !== id);
+  
+  if (filtered.length === vendors.length) return false;
+  
+  localStorage.setItem(STORAGE_KEYS.VENDORS, JSON.stringify(filtered));
+  return true;
+}
+
 // Costs
 export function getCosts(filters?: { 
   year?: number; 
