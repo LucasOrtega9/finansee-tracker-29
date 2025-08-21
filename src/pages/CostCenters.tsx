@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { CostCenter, CostType } from '@/types';
 import { getCostCenters, saveCostCenter, updateCostCenter, deleteCostCenter } from '@/lib/storage';
+import { importCostCentersWorkbook } from '@/lib/xlsxImporter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,13 +9,15 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Edit, Trash2, Target } from 'lucide-react';
+import { Plus, Edit, Trash2, Target, Upload } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 export default function CostCenters() {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
   const [editingCostCenter, setEditingCostCenter] = useState<CostCenter | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<CostType | 'all'>('all');
   const [formData, setFormData] = useState({
@@ -118,6 +121,35 @@ export default function CostCenters() {
     }
   };
 
+  const handleImport = async (file: File) => {
+    setLoading(true);
+    try {
+      const buffer = await file.arrayBuffer();
+      const result = await importCostCentersWorkbook(buffer);
+      
+      loadCostCenters();
+      toast({
+        title: "Importação concluída",
+        description: `${result.imported} centros de custo importados${result.errors > 0 ? ` (${result.errors} erros)` : ''}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Erro na importação",
+        description: "Ocorreu um erro ao importar o arquivo.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleImport(file);
+    }
+  };
+
   const resetForm = () => {
     setFormData({ name: '', code: '', type: 'OPEX', description: '' });
     setEditingCostCenter(null);
@@ -138,85 +170,105 @@ export default function CostCenters() {
           <p className="text-muted-foreground">Gerencie as linhas de orçamento OPEX e CAPEX</p>
         </div>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={resetForm} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Novo Centro de Custo
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>
-                {editingCostCenter ? 'Editar Centro de Custo' : 'Novo Centro de Custo'}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="name">Nome *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Nome do centro de custo"
-                  required
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="code">Código *</Label>
-                <Input
-                  id="code"
-                  value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                  placeholder="CC001"
-                  required
-                />
-              </div>
+        <div className="flex gap-2">
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={resetForm} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Novo Centro de Custo
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingCostCenter ? 'Editar Centro de Custo' : 'Novo Centro de Custo'}
+                </DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <Label htmlFor="name">Nome *</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Nome do centro de custo"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="code">Código *</Label>
+                  <Input
+                    id="code"
+                    value={formData.code}
+                    onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                    placeholder="CC001"
+                    required
+                  />
+                </div>
 
-              <div>
-                <Label htmlFor="type">Tipo *</Label>
-                <Select 
-                  value={formData.type} 
-                  onValueChange={(value) => setFormData({ ...formData, type: value as CostType })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="OPEX">OPEX</SelectItem>
-                    <SelectItem value="CAPEX">CAPEX</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="description">Descrição</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Descrição opcional do centro de custo"
-                  rows={3}
-                />
-              </div>
+                <div>
+                  <Label htmlFor="type">Tipo *</Label>
+                  <Select 
+                    value={formData.type} 
+                    onValueChange={(value) => setFormData({ ...formData, type: value as CostType })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="OPEX">OPEX</SelectItem>
+                      <SelectItem value="CAPEX">CAPEX</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="description">Descrição</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Descrição opcional do centro de custo"
+                    rows={3}
+                  />
+                </div>
 
-              <div className="flex gap-2 pt-4">
-                <Button type="submit" className="flex-1">
-                  {editingCostCenter ? 'Atualizar' : 'Cadastrar'}
-                </Button>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setIsDialogOpen(false)}
-                  className="flex-1"
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <div className="flex gap-2 pt-4">
+                  <Button type="submit" className="flex-1">
+                    {editingCostCenter ? 'Atualizar' : 'Cadastrar'}
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setIsDialogOpen(false)}
+                    className="flex-1"
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          <Button 
+            variant="outline" 
+            onClick={() => fileInputRef.current?.click()}
+            disabled={loading}
+            className="gap-2"
+          >
+            <Upload className="h-4 w-4" />
+            {loading ? 'Importando...' : 'Importar Excel'}
+          </Button>
+          
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            onChange={handleFileUpload}
+            style={{ display: 'none' }}
+          />
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -243,8 +295,11 @@ export default function CostCenters() {
 
       {/* Search and Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+        <CardHeader>
+          <CardTitle>Filtros e Importação</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
             <div className="md:col-span-2">
               <Label htmlFor="search">Buscar centro de custo</Label>
               <Input
@@ -266,6 +321,21 @@ export default function CostCenters() {
                   <SelectItem value="CAPEX">CAPEX</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div>
+              <Label>Importação em lote</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Estrutura: Nome | Código | Tipo | Descrição
+              </p>
+              <Button 
+                variant="outline" 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={loading}
+                className="w-full gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                {loading ? 'Importando...' : 'Upload Excel'}
+              </Button>
             </div>
           </div>
         </CardContent>

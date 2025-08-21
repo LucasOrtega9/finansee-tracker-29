@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
 import { CostType } from '@/types';
-import { saveVendor, saveCost, saveBudget } from './storage';
+import { saveVendor, saveCost, saveBudget, saveCostCenter } from './storage';
 
 const COLUMN_MAPPINGS = {
   fornecedor: ['fornecedor', 'vendor', 'fornec', 'supplier'],
@@ -14,7 +14,10 @@ const COLUMN_MAPPINGS = {
   orcado: ['orçado', 'orcado', 'budget', 'orçamento', 'orcamento'],
   realizado: ['realizado', 'realizado ytd', 'ytd', 'spent', 'acumulado'],
   notas: ['notas', 'obs', 'observação', 'observacoes', 'notes'],
-  cc: ['centro de custo', 'cc', 'cost center', 'centro custo'],
+  cc: ['centro de custo', 'cc', 'cost center', 'centro custo', 'costcenter'],
+  ccCode: ['codigo cc', 'código cc', 'code cc', 'codigo centro custo', 'cc code'],
+  ccType: ['tipo cc', 'cc type', 'tipo centro custo', 'cost center type'],
+  ccDescription: ['descricao cc', 'descrição cc', 'description cc', 'cc description', 'desc cc'],
   gl: ['gl', 'conta contábil', 'conta contabil', 'account', 'gl account'],
   projeto: ['projeto', 'project'],
   tags: ['tags', 'tag']
@@ -217,4 +220,59 @@ export async function importWorkbook(file: File): Promise<void> {
     reader.onerror = () => reject(new Error('Failed to read file'));
     reader.readAsArrayBuffer(file);
   });
+}
+
+export async function importCostCentersFromSheet(ws: XLSX.WorkSheet) {
+  const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+  let imported = 0;
+  let errors = 0;
+
+  for (const row of rows) {
+    try {
+      const name = String(findColumn(row, COLUMN_MAPPINGS.fornecedor) || findColumn(row, ['nome', 'name']) || '').trim();
+      const code = String(findColumn(row, COLUMN_MAPPINGS.ccCode) || '').trim().toUpperCase();
+      const typeRaw = String(findColumn(row, COLUMN_MAPPINGS.ccType) || findColumn(row, COLUMN_MAPPINGS.tipo) || '').toUpperCase();
+      const description = String(findColumn(row, COLUMN_MAPPINGS.ccDescription) || findColumn(row, COLUMN_MAPPINGS.notas) || '').trim();
+
+      if (!name || !code) {
+        console.warn('Centro de custo ignorado: nome ou código em branco', { name, code });
+        continue;
+      }
+
+      const type: CostType = (typeRaw === 'OPEX' || typeRaw === 'CAPEX') ? typeRaw : 'OPEX';
+
+      saveCostCenter({
+        name,
+        code,
+        type,
+        description: description || undefined,
+      });
+
+      imported++;
+    } catch (error) {
+      console.error('Erro ao importar centro de custo:', error, row);
+      errors++;
+    }
+  }
+
+  return { imported, errors };
+}
+
+export async function importCostCentersWorkbook(buffer: ArrayBuffer) {
+  const wb = XLSX.read(new Uint8Array(buffer), { cellDates: false });
+  const sheetNames = wb.SheetNames;
+  
+  // Look for sheets with cost center related names
+  const costCenterSheet = sheetNames.find(name => 
+    ['centro', 'cost center', 'cc', 'centros'].some(keyword => 
+      name.toLowerCase().includes(keyword)
+    )
+  ) || sheetNames[0]; // fallback to first sheet
+
+  if (costCenterSheet) {
+    const result = await importCostCentersFromSheet(wb.Sheets[costCenterSheet]);
+    return result;
+  }
+
+  throw new Error('Nenhuma aba de centros de custo encontrada');
 }
