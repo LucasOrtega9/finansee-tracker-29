@@ -133,7 +133,7 @@ export function CostForm({ initialData, onSuccess, onCancel }: CostFormProps) {
             
             <div>
               <Label htmlFor="type">Tipo</Label>
-              <Select value={formData.type} onValueChange={(value) => handleInputChange('type', value)}>
+              <Select value={formData.type || 'OPEX'} onValueChange={(value) => handleInputChange('type', value)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

@@ -112,7 +112,7 @@ export default function Costs() {
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
             <div>
               <Label>Ano</Label>
-              <Select value={year.toString()} onValueChange={(value) => setYear(Number(value))}>
+              <Select value={year?.toString() || new Date().getFullYear().toString()} onValueChange={(value) => setYear(Number(value))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -126,7 +126,7 @@ export default function Costs() {
             
             <div>
               <Label>Tipo</Label>
-              <Select value={type} onValueChange={(value) => setType(value as CostType | 'all')}>
+              <Select value={type || 'all'} onValueChange={(value) => setType(value as CostType | 'all')}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>

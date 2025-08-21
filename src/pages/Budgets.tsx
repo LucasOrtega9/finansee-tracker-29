@@ -80,7 +80,7 @@ export default function Budgets() {
         <h1 className="text-3xl font-bold">Gestão de Orçamentos</h1>
         <div className="flex items-center gap-2">
           <Label>Ano:</Label>
-          <Select value={year.toString()} onValueChange={(value) => setYear(Number(value))}>
+          <Select value={year?.toString() || new Date().getFullYear().toString()} onValueChange={(value) => setYear(Number(value))}>
             <SelectTrigger className="w-32">
               <SelectValue />
             </SelectTrigger>
