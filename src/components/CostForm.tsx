@@ -5,9 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Cost, CostType } from '@/types';
-import { saveCost, updateCost, saveVendor } from '@/lib/storage';
+import { Cost, CostType, Vendor } from '@/types';
+import { saveCost, updateCost, saveVendor, getVendors } from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
+import { differenceInMonths, parseISO } from 'date-fns';
 
 interface CostFormProps {
   initialData?: Cost;
@@ -18,13 +19,16 @@ interface CostFormProps {
 export function CostForm({ initialData, onSuccess, onCancel }: CostFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
   
   const [formData, setFormData] = useState({
+    vendorId: '',
     vendorName: '',
     type: 'OPEX' as CostType,
     contract: '',
     monthlyValue: 0,
     annualValue: '',
+    totalValue: 0,
     startDate: new Date().toISOString().slice(0, 10),
     endDate: '',
     bookedYear: new Date().getFullYear(),
@@ -37,13 +41,19 @@ export function CostForm({ initialData, onSuccess, onCancel }: CostFormProps) {
   });
 
   useEffect(() => {
+    setVendors(getVendors());
+  }, []);
+
+  useEffect(() => {
     if (initialData) {
       setFormData({
+        vendorId: initialData.vendorId,
         vendorName: initialData.vendor?.name || '',
         type: initialData.type,
         contract: initialData.contract || '',
         monthlyValue: initialData.monthlyValue,
         annualValue: initialData.annualValue.toString(),
+        totalValue: calculateTotalValue(initialData.monthlyValue, initialData.startDate.toISOString().slice(0, 10), initialData.endDate?.toISOString().slice(0, 10)),
         startDate: initialData.startDate.toISOString().slice(0, 10),
         endDate: initialData.endDate ? initialData.endDate.toISOString().slice(0, 10) : '',
         bookedYear: initialData.bookedYear,
@@ -57,6 +67,21 @@ export function CostForm({ initialData, onSuccess, onCancel }: CostFormProps) {
     }
   }, [initialData]);
 
+  const calculateTotalValue = (monthlyValue: number, startDate: string, endDate?: string): number => {
+    if (!startDate || !monthlyValue) return 0;
+    
+    const start = parseISO(startDate);
+    const end = endDate ? parseISO(endDate) : new Date(start.getFullYear(), 11, 31); // End of year if no end date
+    
+    const months = Math.max(1, differenceInMonths(end, start) + 1);
+    return monthlyValue * months;
+  };
+
+  useEffect(() => {
+    const total = calculateTotalValue(formData.monthlyValue, formData.startDate, formData.endDate);
+    setFormData(prev => ({ ...prev, totalValue: total }));
+  }, [formData.monthlyValue, formData.startDate, formData.endDate]);
+
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -66,10 +91,20 @@ export function CostForm({ initialData, onSuccess, onCancel }: CostFormProps) {
     setLoading(true);
 
     try {
-      const vendor = saveVendor({ name: formData.vendorName });
+      let vendorId = formData.vendorId;
+      
+      // If vendorName is filled but no vendorId, create new vendor
+      if (formData.vendorName && !vendorId) {
+        const vendor = saveVendor({ name: formData.vendorName });
+        vendorId = vendor.id;
+      }
+      
+      if (!vendorId) {
+        throw new Error('Fornecedor é obrigatório');
+      }
       
       const costData = {
-        vendorId: vendor.id,
+        vendorId,
         type: formData.type,
         contract: formData.contract || undefined,
         monthlyValue: formData.monthlyValue,
@@ -122,13 +157,42 @@ export function CostForm({ initialData, onSuccess, onCancel }: CostFormProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <Label htmlFor="vendorName">Fornecedor</Label>
-              <Input
-                id="vendorName"
-                value={formData.vendorName}
-                onChange={(e) => handleInputChange('vendorName', e.target.value)}
-                required
-              />
+              <Label htmlFor="vendor">Fornecedor</Label>
+              <Select 
+                value={formData.vendorId || 'new'} 
+                onValueChange={(value) => {
+                  if (value === 'new') {
+                    handleInputChange('vendorId', '');
+                    handleInputChange('vendorName', '');
+                  } else {
+                    const vendor = vendors.find(v => v.id === value);
+                    handleInputChange('vendorId', value);
+                    handleInputChange('vendorName', vendor?.name || '');
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um fornecedor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="new">+ Novo fornecedor</SelectItem>
+                  {vendors.map(vendor => (
+                    <SelectItem key={vendor.id} value={vendor.id}>
+                      {vendor.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              {(!formData.vendorId || formData.vendorId === 'new') && (
+                <Input
+                  className="mt-2"
+                  placeholder="Nome do novo fornecedor"
+                  value={formData.vendorName}
+                  onChange={(e) => handleInputChange('vendorName', e.target.value)}
+                  required
+                />
+              )}
             </div>
             
             <div>
@@ -175,6 +239,21 @@ export function CostForm({ initialData, onSuccess, onCancel }: CostFormProps) {
                 onChange={(e) => handleInputChange('annualValue', e.target.value)}
                 placeholder="Auto calculado se vazio"
               />
+            </div>
+            
+            <div>
+              <Label htmlFor="totalValue">Valor Total (calculado)</Label>
+              <Input
+                id="totalValue"
+                type="number"
+                step="0.01"
+                value={formData.totalValue.toFixed(2)}
+                disabled
+                className="bg-muted"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Calculado automaticamente baseado no período
+              </p>
             </div>
             
             <div>

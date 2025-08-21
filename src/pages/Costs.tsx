@@ -156,8 +156,20 @@ export default function Costs() {
                   accept=".xlsx,.xls"
                   onChange={handleFileUpload}
                   disabled={loading}
+                  className="flex-1"
                 />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={loading}
+                >
+                  {loading ? 'Importando...' : 'Selecionar'}
+                </Button>
               </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Upload em lote via Excel (.xlsx)
+              </p>
             </div>
           </div>
         </CardContent>
@@ -178,6 +190,7 @@ export default function Costs() {
                   <th className="text-left py-3 px-2">Contrato</th>
                   <th className="text-left py-3 px-2">Mensal</th>
                   <th className="text-left py-3 px-2">Anual</th>
+                  <th className="text-left py-3 px-2">Total Período</th>
                   <th className="text-left py-3 px-2">Ano</th>
                   <th className="text-left py-3 px-2">CC</th>
                   <th className="text-left py-3 px-2">GL</th>
@@ -186,45 +199,52 @@ export default function Costs() {
                 </tr>
               </thead>
               <tbody>
-                {costs.map((cost) => (
-                  <tr key={cost.id} className="border-b hover:bg-muted/50">
-                    <td className="py-3 px-2 font-medium">{cost.vendor?.name}</td>
+                {costs.map((cost) => {
+                  const totalPeriod = cost.endDate 
+                    ? cost.monthlyValue * (Math.max(1, Math.floor((cost.endDate.getTime() - cost.startDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44)) + 1))
+                    : cost.annualValue;
+                  
+                  return (
+                    <tr key={cost.id} className="border-b hover:bg-muted/50">
+                      <td className="py-3 px-2 font-medium">{cost.vendor?.name}</td>
+                      <td className="py-3 px-2">
+                        <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                          cost.type === 'OPEX' 
+                            ? 'bg-chart-1/20 text-chart-1' 
+                            : 'bg-chart-3/20 text-chart-3'
+                        }`}>
+                          {cost.type}
+                        </span>
+                      </td>
+                      <td className="py-3 px-2">{cost.contract || '-'}</td>
+                      <td className="py-3 px-2">{formatCurrency(cost.monthlyValue)}</td>
+                      <td className="py-3 px-2 font-medium">{formatCurrency(cost.annualValue)}</td>
+                      <td className="py-3 px-2 font-medium text-primary">{formatCurrency(totalPeriod)}</td>
+                      <td className="py-3 px-2">{cost.bookedYear}</td>
+                      <td className="py-3 px-2">{cost.costCenter || '-'}</td>
+                      <td className="py-3 px-2">{cost.glAccount || '-'}</td>
+                      <td className="py-3 px-2">{cost.project || '-'}</td>
                     <td className="py-3 px-2">
-                      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                        cost.type === 'OPEX' 
-                          ? 'bg-blue-100 text-blue-800' 
-                          : 'bg-green-100 text-green-800'
-                      }`}>
-                        {cost.type}
-                      </span>
-                    </td>
-                    <td className="py-3 px-2">{cost.contract || '-'}</td>
-                    <td className="py-3 px-2">{formatCurrency(cost.monthlyValue)}</td>
-                    <td className="py-3 px-2 font-medium">{formatCurrency(cost.annualValue)}</td>
-                    <td className="py-3 px-2">{cost.bookedYear}</td>
-                    <td className="py-3 px-2">{cost.costCenter || '-'}</td>
-                    <td className="py-3 px-2">{cost.glAccount || '-'}</td>
-                    <td className="py-3 px-2">{cost.project || '-'}</td>
-                    <td className="py-3 px-2">
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(cost)}
-                        >
-                          Editar
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDelete(cost.id)}
-                        >
-                          Excluir
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(cost)}
+                          >
+                            Editar
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDelete(cost.id)}
+                          >
+                            Excluir
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
             
