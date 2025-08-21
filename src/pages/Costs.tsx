@@ -22,12 +22,12 @@ export default function Costs() {
   
   // Filters
   const [year, setYear] = useState(new Date().getFullYear());
-  const [type, setType] = useState<CostType | ''>('');
+  const [type, setType] = useState<CostType | 'all'>('all');
   const [search, setSearch] = useState('');
 
   const loadCosts = () => {
     const filters: any = { year };
-    if (type) filters.type = type;
+    if (type !== 'all') filters.type = type;
     if (search) filters.search = search;
     
     const costsData = getCosts(filters);
@@ -126,12 +126,12 @@ export default function Costs() {
             
             <div>
               <Label>Tipo</Label>
-              <Select value={type} onValueChange={(value) => setType(value as CostType | '')}>
+              <Select value={type} onValueChange={(value) => setType(value as CostType | 'all')}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="OPEX">OPEX</SelectItem>
                   <SelectItem value="CAPEX">CAPEX</SelectItem>
                 </SelectContent>
