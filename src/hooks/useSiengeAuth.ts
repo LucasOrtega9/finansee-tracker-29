@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { SiengeAuth } from '../types/sienge';
 import siengeClient from '../lib/sienge-client';
 
@@ -7,7 +7,7 @@ interface UseSiengeAuthReturn {
   isLoading: boolean;
   error: string | null;
   auth: SiengeAuth | null;
-  login: (username: string, password: string) => Promise<void>;
+  authenticate: () => Promise<void>;
   logout: () => void;
   refreshToken: () => Promise<void>;
 }
@@ -20,7 +20,8 @@ export const useSiengeAuth = (): UseSiengeAuthReturn => {
       try {
         const parsed = JSON.parse(stored);
         // Verificar se o token não expirou
-        if (new Date(parsed.expiresAt) > new Date()) {
+        const expiryTime = parsed.timestamp + (parsed.expires_in * 1000);
+        if (Date.now() < expiryTime) {
           return parsed;
         }
       } catch {
@@ -33,27 +34,31 @@ export const useSiengeAuth = (): UseSiengeAuthReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const login = useCallback(async (username: string, password: string) => {
+  const authenticate = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const authData = await siengeClient.authenticate(username, password);
-      setAuth(authData);
+      const authData = await siengeClient.authenticate();
+      
+      // Adicionar timestamp para cálculo de expiração
+      const authWithTimestamp = {
+        ...authData,
+        timestamp: Date.now(),
+      };
+      
+      setAuth(authWithTimestamp);
       
       // Salvar no localStorage
-      localStorage.setItem('sienge_auth', JSON.stringify(authData));
+      localStorage.setItem('sienge_auth', JSON.stringify(authWithTimestamp));
       
       // Configurar refresh automático do token
-      const expiresAt = new Date(authData.expiresAt);
-      const now = new Date();
-      const timeUntilExpiry = expiresAt.getTime() - now.getTime();
+      const refreshTime = authData.expires_in * 1000 - (5 * 60 * 1000); // 5 minutos antes da expiração
       
-      // Refresh 5 minutos antes da expiração
-      if (timeUntilExpiry > 300000) {
+      if (refreshTime > 0) {
         setTimeout(() => {
           refreshToken();
-        }, timeUntilExpiry - 300000);
+        }, refreshTime);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro na autenticação';
@@ -67,27 +72,46 @@ export const useSiengeAuth = (): UseSiengeAuthReturn => {
   const logout = useCallback(() => {
     setAuth(null);
     localStorage.removeItem('sienge_auth');
+    // Limpar token do cliente
+    siengeClient['accessToken'] = null;
+    siengeClient['tokenExpiry'] = null;
   }, []);
 
   const refreshToken = useCallback(async () => {
-    if (!auth) return;
-
     try {
-      // Implementar refresh do token se a API suportar
-      // Por enquanto, apenas fazemos logout
-      logout();
+      await authenticate();
     } catch (err) {
       console.error('Erro ao renovar token:', err);
       logout();
     }
-  }, [auth, logout]);
+  }, [authenticate, logout]);
+
+  // Verificar se o token expirou ao inicializar
+  useEffect(() => {
+    if (auth) {
+      const expiryTime = auth.timestamp + (auth.expires_in * 1000);
+      if (Date.now() >= expiryTime) {
+        logout();
+      } else {
+        // Configurar refresh automático
+        const timeUntilExpiry = expiryTime - Date.now();
+        const refreshTime = timeUntilExpiry - (5 * 60 * 1000); // 5 minutos antes
+        
+        if (refreshTime > 0) {
+          setTimeout(() => {
+            refreshToken();
+          }, refreshTime);
+        }
+      }
+    }
+  }, [auth, logout, refreshToken]);
 
   return {
-    isAuthenticated: !!auth,
+    isAuthenticated: !!auth && siengeClient.isAuthenticated(),
     isLoading,
     error,
     auth,
-    login,
+    authenticate,
     logout,
     refreshToken,
   };

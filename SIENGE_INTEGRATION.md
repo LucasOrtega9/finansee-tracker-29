@@ -1,11 +1,11 @@
 # Integração com API do Sienge
 
-Este projeto implementa uma integração completa com a API do Sienge para gerenciamento de dados financeiros.
+Este projeto implementa uma integração completa com a API oficial do Sienge para gerenciamento de dados financeiros, baseada na [documentação oficial](https://api.sienge.com.br/docs/#/bill-debt-v1).
 
 ## 🚀 Funcionalidades
 
-### Autenticação
-- Login seguro com credenciais da API do Sienge
+### Autenticação OAuth2
+- Autenticação segura via OAuth2 Client Credentials
 - Gerenciamento automático de tokens
 - Refresh automático de sessão
 
@@ -13,8 +13,10 @@ Este projeto implementa uma integração completa com a API do Sienge para geren
 - **Visão Geral**: Resumo financeiro com métricas principais
 - **Fornecedores**: Lista completa de fornecedores cadastrados
 - **Centros de Custo**: Hierarquia de centros de custo
-- **Lançamentos**: Controle de receitas e despesas
+- **Contas a Pagar**: Gestão de contas a pagar (Bill Debt)
+- **Contas a Receber**: Gestão de contas a receber (Bill Credit)
 - **Pagamentos**: Histórico de pagamentos realizados
+- **Recebimentos**: Histórico de recebimentos realizados
 
 ### Recursos Avançados
 - Filtros e busca em tempo real
@@ -26,8 +28,8 @@ Este projeto implementa uma integração completa com a API do Sienge para geren
 ## 📋 Pré-requisitos
 
 - Node.js 18+ ou Bun
-- Credenciais de acesso à API do Sienge
-- URL da API do Sienge
+- Credenciais OAuth2 (Client ID e Client Secret) da API do Sienge
+- Acesso à documentação oficial da API
 
 ## ⚙️ Configuração
 
@@ -38,7 +40,8 @@ Crie um arquivo `.env` na raiz do projeto:
 ```bash
 # Configuração da API do Sienge
 VITE_SIENGE_API_URL=https://api.sienge.com.br
-VITE_SIENGE_API_KEY=sua_chave_api_aqui
+VITE_SIENGE_CLIENT_ID=seu_client_id_aqui
+VITE_SIENGE_CLIENT_SECRET=seu_client_secret_aqui
 
 # Outras configurações
 VITE_APP_TITLE=Sienge Dashboard
@@ -73,24 +76,36 @@ npm run preview
 
 ## 🔌 Endpoints da API
 
-### Autenticação
-- `POST /auth/token` - Autenticação de usuário
+### Autenticação OAuth2
+- `POST /oauth/token` - Autenticação via Client Credentials
 
-### Fornecedores
-- `GET /fornecedores` - Lista de fornecedores
-- `GET /fornecedores/{id}` - Detalhes de um fornecedor
+### Contas a Pagar (Bill Debt)
+- `GET /bill-debt/v1` - Lista de contas a pagar
+- `GET /bill-debt/v1/{id}` - Detalhes de uma conta a pagar
 
-### Centros de Custo
-- `GET /centros-custo` - Lista de centros de custo
-- `GET /centros-custo/{id}` - Detalhes de um centro de custo
+### Contas a Receber (Bill Credit)
+- `GET /bill-credit/v1` - Lista de contas a receber
+- `GET /bill-credit/v1/{id}` - Detalhes de uma conta a receber
 
-### Lançamentos Financeiros
-- `GET /lancamentos-financeiros` - Lista de lançamentos
-- `GET /lancamentos-financeiros/{id}` - Detalhes de um lançamento
+### Fornecedores (Suppliers)
+- `GET /supplier/v1` - Lista de fornecedores
+- `GET /supplier/v1/{id}` - Detalhes de um fornecedor
+
+### Centros de Custo (Cost Centers)
+- `GET /cost-center/v1` - Lista de centros de custo
+- `GET /cost-center/v1/{id}` - Detalhes de um centro de custo
+
+### Categorias
+- `GET /category/v1` - Lista de categorias
+- `GET /category/v1/{id}` - Detalhes de uma categoria
 
 ### Pagamentos
-- `GET /pagamentos` - Lista de pagamentos
-- `GET /pagamentos/{id}` - Detalhes de um pagamento
+- `GET /payment/v1` - Lista de pagamentos
+- `GET /payment/v1/{id}` - Detalhes de um pagamento
+
+### Recebimentos
+- `GET /receipt/v1` - Lista de recebimentos
+- `GET /receipt/v1/{id}` - Detalhes de um recebimento
 
 ## 🏗️ Estrutura do Projeto
 
@@ -98,20 +113,22 @@ npm run preview
 src/
 ├── components/sienge/          # Componentes específicos do Sienge
 │   ├── SiengeApp.tsx          # Componente principal
-│   ├── SiengeLogin.tsx        # Tela de login
+│   ├── SiengeLogin.tsx        # Tela de autenticação OAuth2
 │   ├── SiengeDashboard.tsx    # Dashboard principal
-│   ├── SiengeFornecedores.tsx # Gestão de fornecedores
-│   ├── SiengeCentrosCusto.tsx # Gestão de centros de custo
-│   ├── SiengeLancamentos.tsx  # Gestão de lançamentos
-│   └── SiengePagamentos.tsx   # Gestão de pagamentos
+│   ├── SiengeSuppliers.tsx    # Gestão de fornecedores
+│   ├── SiengeCostCenters.tsx  # Gestão de centros de custo
+│   ├── SiengeBillDebts.tsx    # Gestão de contas a pagar
+│   ├── SiengeBillCredits.tsx  # Gestão de contas a receber
+│   ├── SiengePayments.tsx     # Gestão de pagamentos
+│   └── SiengeReceipts.tsx     # Gestão de recebimentos
 ├── hooks/                      # Hooks personalizados
-│   ├── useSiengeAuth.ts       # Autenticação
+│   ├── useSiengeAuth.ts       # Autenticação OAuth2
 │   └── useSiengeData.ts       # Consumo de dados
 ├── lib/                        # Utilitários e configurações
 │   ├── sienge-config.ts       # Configuração da API
-│   └── sienge-client.ts       # Cliente HTTP
+│   └── sienge-client.ts       # Cliente HTTP OAuth2
 └── types/                      # Tipos TypeScript
-    └── sienge.ts              # Interfaces da API
+    └── sienge.ts              # Interfaces baseadas na documentação oficial
 ```
 
 ## 🎯 Como Usar
@@ -130,55 +147,67 @@ function App() {
 }
 ```
 
-### 2. Configurar Credenciais
+### 2. Configurar Credenciais OAuth2
 
-Certifique-se de que as variáveis de ambiente estão configuradas corretamente.
+Certifique-se de que as variáveis de ambiente estão configuradas corretamente:
+- `VITE_SIENGE_CLIENT_ID`
+- `VITE_SIENGE_CLIENT_SECRET`
 
 ### 3. Acessar o Dashboard
 
 O sistema automaticamente:
-- Exibe a tela de login se não autenticado
-- Redireciona para o dashboard após autenticação
-- Gerencia sessões e tokens automaticamente
+- Autentica via OAuth2 Client Credentials
+- Gerencia tokens e sessões automaticamente
+- Exibe o dashboard com todos os dados
 
-## 🔒 Segurança
+## 🔒 Segurança e OAuth2
 
-- Tokens são armazenados no localStorage (considere usar httpOnly cookies em produção)
-- Refresh automático de tokens
-- Validação de credenciais
-- Timeout configurável para requisições
+- **Autenticação OAuth2**: Usa Client Credentials flow
+- **Tokens seguros**: Armazenados com expiração automática
+- **Refresh automático**: Renovação automática de tokens
+- **Escopo limitado**: Apenas permissões necessárias (read/write)
 
 ## 📊 Dados Disponíveis
 
-### Fornecedores
-- Código, nome, CNPJ/CPF
+### Contas a Pagar (Bill Debt)
+- Código, descrição, valor
+- Data de vencimento e pagamento
+- Status (PENDING, PAID, OVERDUE, CANCELLED)
+- Fornecedor e centro de custo vinculados
+
+### Contas a Receber (Bill Credit)
+- Código, descrição, valor
+- Data de vencimento e recebimento
+- Status (PENDING, PAID, OVERDUE, CANCELLED)
+- Cliente e centro de custo vinculados
+
+### Fornecedores (Suppliers)
+- Código, nome, documento (CNPJ/CPF)
 - Informações de contato (email, telefone)
 - Endereço completo
 - Status ativo/inativo
 
-### Centros de Custo
+### Centros de Custo (Cost Centers)
 - Código e nome
 - Descrição opcional
 - Hierarquia (centro pai)
 - Status ativo/inativo
 
-### Lançamentos Financeiros
-- Tipo (receita/despesa)
-- Valor e descrição
-- Datas de vencimento e pagamento
-- Status (pendente, pago, vencido, cancelado)
-- Vinculação com fornecedor e centro de custo
+### Categorias
+- Código e nome
+- Tipo (EXPENSE ou REVENUE)
+- Descrição opcional
 
-### Pagamentos
+### Pagamentos e Recebimentos
 - Valor e data
-- Forma de pagamento
+- Método de pagamento/recebimento
 - Número do documento
 - Observações
 
 ## 🚨 Tratamento de Erros
 
 - Retry automático em falhas de rede
-- Mensagens de erro amigáveis
+- Mensagens de erro baseadas na API oficial
 - Fallbacks para dados indisponíveis
 - Logs detalhados para debugging
 
@@ -205,10 +234,10 @@ npm run test
 
 ## 📈 Monitoramento
 
-- Logs de requisições
+- Logs de requisições OAuth2
 - Métricas de performance
 - Tratamento de timeouts
-- Monitoramento de erros
+- Monitoramento de erros de autenticação
 
 ## 🤝 Contribuição
 
@@ -226,17 +255,25 @@ Este projeto está sob a licença MIT. Veja o arquivo LICENSE para mais detalhes
 
 Para suporte técnico ou dúvidas sobre a integração:
 
+- Consulte a [documentação oficial da API do Sienge](https://api.sienge.com.br/docs/#/bill-debt-v1)
 - Abra uma issue no GitHub
-- Consulte a documentação da API do Sienge
 - Entre em contato com a equipe de desenvolvimento
 
 ## 🔮 Roadmap
 
 - [ ] Integração com outras APIs financeiras
-- [ ] Relatórios avançados
-- [ ] Notificações em tempo real
+- [ ] Relatórios avançados baseados na API oficial
+- [ ] Notificações em tempo real via webhooks
 - [ ] Backup automático de dados
 - [ ] Integração com sistemas de BI
 - [ ] API REST para terceiros
-- [ ] Webhooks para eventos
 - [ ] Auditoria completa de ações
+- [ ] Suporte a múltiplos ambientes (dev, staging, prod)
+
+## 📚 Documentação da API
+
+Para mais detalhes sobre os endpoints e funcionalidades disponíveis, consulte:
+
+- [Documentação da API do Sienge](https://api.sienge.com.br/docs/#/bill-debt-v1)
+- [Especificação OAuth2](https://oauth.net/2/)
+- [Padrões REST API](https://restfulapi.net/)
