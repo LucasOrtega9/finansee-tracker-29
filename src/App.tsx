@@ -9,6 +9,7 @@ import Budgets from "./pages/Budgets";
 import Vendors from "./pages/Vendors";
 import CostCenters from "./pages/CostCenters";
 import NotFound from "./pages/NotFound";
+import { SiengeApp } from "./components/sienge/SiengeApp";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +46,11 @@ function Layout({ children }: { children: React.ReactNode }) {
               }>
                 Centros de Custo
               </NavLink>
+              <NavLink to="/sienge" className={({ isActive }) => 
+                `hover:text-primary transition-colors ${isActive ? 'text-primary font-medium' : 'text-muted-foreground'}`
+              }>
+                Sienge API
+              </NavLink>
             </nav>
           </div>
         </div>
@@ -67,6 +73,7 @@ const App = () => (
             <Route path="/budgets" element={<Budgets />} />
             <Route path="/vendors" element={<Vendors />} />
             <Route path="/cost-centers" element={<CostCenters />} />
+            <Route path="/sienge" element={<SiengeApp />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>
