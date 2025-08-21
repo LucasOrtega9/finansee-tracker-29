@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Cost, CostType, Vendor, CostCenter } from '@/types';
+import { Switch } from '@/components/ui/switch';
+import { Cost, CostType, Vendor, CostCenter, CostAllocation } from '@/types';
 import { saveCost, updateCost, saveVendor, getVendors, getCostCenters } from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
 import { differenceInMonths, parseISO } from 'date-fns';
@@ -36,10 +37,11 @@ export function CostForm({ initialData, onSuccess, onCancel }: CostFormProps) {
     bookedYear: new Date().getFullYear(),
     realizedYTD: 0,
     notes: '',
-    costCenterLegacy: '',
     glAccount: '',
     project: '',
     tags: '',
+    useAllocation: false,
+    allocations: [] as CostAllocation[],
   });
 
   useEffect(() => {
@@ -72,10 +74,11 @@ export function CostForm({ initialData, onSuccess, onCancel }: CostFormProps) {
         bookedYear: initialData.bookedYear,
         realizedYTD: initialData.realizedYTD,
         notes: initialData.notes || '',
-        costCenterLegacy: initialData.costCenterLegacy || '',
         glAccount: initialData.glAccount || '',
         project: initialData.project || '',
         tags: initialData.tags.join(', '),
+        useAllocation: initialData.useAllocation || false,
+        allocations: initialData.allocations || [],
       });
     }
   }, [initialData]);
@@ -99,6 +102,33 @@ export function CostForm({ initialData, onSuccess, onCancel }: CostFormProps) {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const addAllocation = () => {
+    setFormData(prev => ({
+      ...prev,
+      allocations: [...prev.allocations, { costCenterId: '', percentage: 0 }]
+    }));
+  };
+
+  const removeAllocation = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      allocations: prev.allocations.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateAllocation = (index: number, field: keyof CostAllocation, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      allocations: prev.allocations.map((allocation, i) => 
+        i === index ? { ...allocation, [field]: value } : allocation
+      )
+    }));
+  };
+
+  const getTotalAllocationPercentage = () => {
+    return formData.allocations.reduce((sum, allocation) => sum + allocation.percentage, 0);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -119,7 +149,7 @@ export function CostForm({ initialData, onSuccess, onCancel }: CostFormProps) {
       const costData = {
         vendorId,
         type: formData.type,
-        costCenterId: formData.costCenterId || undefined,
+        costCenterId: formData.useAllocation ? undefined : (formData.costCenterId || undefined),
         contract: formData.contract || undefined,
         monthlyValue: formData.monthlyValue,
         annualValue: formData.annualValue ? Number(formData.annualValue) : formData.monthlyValue * 12,
@@ -128,10 +158,11 @@ export function CostForm({ initialData, onSuccess, onCancel }: CostFormProps) {
         bookedYear: formData.bookedYear,
         realizedYTD: formData.realizedYTD,
         notes: formData.notes || undefined,
-        costCenterLegacy: formData.costCenterLegacy || undefined,
         glAccount: formData.glAccount || undefined,
         project: formData.project || undefined,
         tags: formData.tags.split(/[;,]/).map(s => s.trim()).filter(Boolean),
+        useAllocation: formData.useAllocation,
+        allocations: formData.useAllocation ? formData.allocations : [],
       };
 
       if (initialData) {
@@ -223,29 +254,108 @@ export function CostForm({ initialData, onSuccess, onCancel }: CostFormProps) {
             </div>
             
             <div>
-              <Label htmlFor="costCenter">Centro de Custo</Label>
-              <Select 
-                value={formData.costCenterId || 'none'} 
-                onValueChange={(value) => handleInputChange('costCenterId', value === 'none' ? '' : value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um centro de custo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Nenhum</SelectItem>
-                  {costCenters
-                    .filter(cc => cc.type === formData.type)
-                    .map(costCenter => (
-                      <SelectItem key={costCenter.id} value={costCenter.id}>
-                        {costCenter.code} - {costCenter.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-              {costCenters.filter(cc => cc.type === formData.type).length === 0 && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Nenhum centro {formData.type} cadastrado
-                </p>
+              <div className="flex items-center space-x-2 mb-2">
+                <Switch
+                  id="useAllocation"
+                  checked={formData.useAllocation}
+                  onCheckedChange={(value) => handleInputChange('useAllocation', value)}
+                />
+                <Label htmlFor="useAllocation">Rateio de centro de custo</Label>
+              </div>
+              
+              {!formData.useAllocation ? (
+                <>
+                  <Label htmlFor="costCenter">Centro de Custo</Label>
+                  <Select 
+                    value={formData.costCenterId || 'none'} 
+                    onValueChange={(value) => handleInputChange('costCenterId', value === 'none' ? '' : value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um centro de custo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhum</SelectItem>
+                      {costCenters
+                        .filter(cc => cc.type === formData.type)
+                        .map(costCenter => (
+                          <SelectItem key={costCenter.id} value={costCenter.id}>
+                            {costCenter.code} - {costCenter.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  {costCenters.filter(cc => cc.type === formData.type).length === 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Nenhum centro {formData.type} cadastrado
+                    </p>
+                  )}
+                </>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label>Rateio por Centro de Custo</Label>
+                    <Button type="button" variant="outline" size="sm" onClick={addAllocation}>
+                      + Adicionar Rateio
+                    </Button>
+                  </div>
+                  
+                  {formData.allocations.map((allocation, index) => (
+                    <div key={index} className="flex gap-2 items-end">
+                      <div className="flex-1">
+                        <Label>Centro de Custo</Label>
+                        <Select
+                          value={allocation.costCenterId}
+                          onValueChange={(value) => updateAllocation(index, 'costCenterId', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {costCenters
+                              .filter(cc => cc.type === formData.type)
+                              .map(costCenter => (
+                                <SelectItem key={costCenter.id} value={costCenter.id}>
+                                  {costCenter.code} - {costCenter.name}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="w-24">
+                        <Label>%</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          value={allocation.percentage}
+                          onChange={(e) => updateAllocation(index, 'percentage', Number(e.target.value))}
+                        />
+                      </div>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => removeAllocation(index)}
+                      >
+                        Remover
+                      </Button>
+                    </div>
+                  ))}
+                  
+                  {formData.allocations.length > 0 && (
+                    <div className="text-sm">
+                      <span className={getTotalAllocationPercentage() !== 100 ? "text-destructive" : "text-muted-foreground"}>
+                        Total: {getTotalAllocationPercentage().toFixed(2)}%
+                      </span>
+                      {getTotalAllocationPercentage() !== 100 && (
+                        <span className="text-destructive ml-2">
+                          (deve somar 100%)
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
             
@@ -340,15 +450,6 @@ export function CostForm({ initialData, onSuccess, onCancel }: CostFormProps) {
               />
             </div>
             
-            <div>
-              <Label htmlFor="costCenterLegacy">Centro de Custo (Legacy)</Label>
-              <Input
-                id="costCenterLegacy"
-                value={formData.costCenterLegacy}
-                onChange={(e) => handleInputChange('costCenterLegacy', e.target.value)}
-                placeholder="CC antigo (texto livre)"
-              />
-            </div>
             
             <div>
               <Label htmlFor="glAccount">GL / Conta Contábil</Label>

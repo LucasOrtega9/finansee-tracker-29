@@ -221,7 +221,12 @@ export default function Costs() {
                       <td className="py-3 px-2 font-medium">{formatCurrency(cost.annualValue)}</td>
                       <td className="py-3 px-2 font-medium text-primary">{formatCurrency(totalPeriod)}</td>
                       <td className="py-3 px-2">{cost.bookedYear}</td>
-                      <td className="py-3 px-2">{cost.costCenter?.name || cost.costCenterLegacy || '-'}</td>
+                      <td className="py-3 px-2">
+                        {cost.useAllocation 
+                          ? `Rateio (${cost.allocations.length} centros)` 
+                          : cost.costCenter?.name || '-'
+                        }
+                      </td>
                       <td className="py-3 px-2">{cost.glAccount || '-'}</td>
                       <td className="py-3 px-2">{cost.project || '-'}</td>
                     <td className="py-3 px-2">

@@ -154,7 +154,7 @@ export function getCosts(filters?: {
       c.contract?.toLowerCase().includes(search) ||
       c.notes?.toLowerCase().includes(search) ||
       c.project?.toLowerCase().includes(search) ||
-      c.costCenterLegacy?.toLowerCase().includes(search) ||
+      
       c.costCenter?.name?.toLowerCase().includes(search) ||
       c.costCenter?.code?.toLowerCase().includes(search) ||
       c.glAccount?.toLowerCase().includes(search)

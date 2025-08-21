@@ -112,10 +112,12 @@ export async function importCostsFromSheet(worksheet: XLSX.WorkSheet, typeHint: 
       bookedYear,
       realizedYTD,
       notes,
-      costCenterLegacy: costCenter,
+      
       glAccount,
       project,
       tags,
+      useAllocation: false,
+      allocations: [],
     });
     
     // Save budget if specified

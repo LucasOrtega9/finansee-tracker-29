@@ -24,6 +24,11 @@ export interface Budget {
   createdAt: Date;
 }
 
+export interface CostAllocation {
+  costCenterId: string;
+  percentage: number;
+}
+
 export interface Cost {
   id: string;
   vendorId: string;
@@ -39,10 +44,11 @@ export interface Cost {
   bookedYear: number;
   realizedYTD: number;
   notes?: string;
-  costCenterLegacy?: string;
   glAccount?: string;
   project?: string;
   tags: string[];
+  useAllocation: boolean;
+  allocations: CostAllocation[];
   createdAt: Date;
   updatedAt: Date;
 }
