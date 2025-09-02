@@ -30,11 +30,11 @@ export const SiengePagamentos: React.FC<SiengePagamentosProps> = ({ token }) => 
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
 
-  const { data, isLoading, error, refetch } = usePagamentos(token, {
+  const { data, isLoading, error, refetch } = usePayments({
     page,
-    pageSize,
-    dataInicio: dataInicio || undefined,
-    dataFim: dataFim || undefined,
+    size: pageSize,
+    paymentDateFrom: dataInicio || undefined,
+    paymentDateTo: dataFim || undefined,
   });
 
   const formatCurrency = (value: number) => {
@@ -81,8 +81,8 @@ export const SiengePagamentos: React.FC<SiengePagamentosProps> = ({ token }) => 
     );
   }
 
-  const pagamentos = data?.data || [];
-  const pagination = data?.pagination;
+  const pagamentos = data?.content || [];
+  const pagination = data;
 
   return (
     <div className="space-y-6">

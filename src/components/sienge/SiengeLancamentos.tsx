@@ -36,13 +36,12 @@ export const SiengeLancamentos: React.FC<SiengeLancamentosProps> = ({ token }) =
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
 
-  const { data, isLoading, error, refetch } = useLancamentos(token, {
+  const { data, isLoading, error, refetch } = useBillDebts({
     page,
-    pageSize,
-    tipo: tipoFilter === 'all' ? undefined : tipoFilter as 'receita' | 'despesa',
+    size: pageSize,
     status: statusFilter === 'all' ? undefined : statusFilter,
-    dataInicio: dataInicio || undefined,
-    dataFim: dataFim || undefined,
+    dueDateFrom: dataInicio || undefined,
+    dueDateTo: dataFim || undefined,
   });
 
   const formatCurrency = (value: number) => {
@@ -112,8 +111,8 @@ export const SiengeLancamentos: React.FC<SiengeLancamentosProps> = ({ token }) =
     );
   }
 
-  const lancamentos = data?.data || [];
-  const pagination = data?.pagination;
+  const lancamentos = data?.content || [];
+  const pagination = data;
 
   return (
     <div className="space-y-6">

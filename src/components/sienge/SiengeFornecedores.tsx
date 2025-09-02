@@ -29,10 +29,10 @@ export const SiengeFornecedores: React.FC<SiengeFornecedoresProps> = ({ token })
   const [pageSize] = useState(20);
   const [ativoFilter, setAtivoFilter] = useState<boolean | undefined>(undefined);
 
-  const { data, isLoading, error, refetch } = useFornecedores(token, {
+  const { data, isLoading, error, refetch } = useSuppliers({
     page,
-    pageSize,
-    ativo: ativoFilter,
+    size: pageSize,
+    active: ativoFilter,
     search: searchTerm || undefined,
   });
 
@@ -84,8 +84,8 @@ export const SiengeFornecedores: React.FC<SiengeFornecedoresProps> = ({ token })
     );
   }
 
-  const fornecedores = data?.data || [];
-  const pagination = data?.pagination;
+  const fornecedores = data?.content || [];
+  const pagination = data;
 
   return (
     <div className="space-y-6">

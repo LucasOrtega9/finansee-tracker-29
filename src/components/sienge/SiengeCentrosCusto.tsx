@@ -27,10 +27,10 @@ export const SiengeCentrosCusto: React.FC<SiengeCentrosCustoProps> = ({ token })
   const [pageSize] = useState(20);
   const [ativoFilter, setAtivoFilter] = useState<boolean | undefined>(undefined);
 
-  const { data, isLoading, error, refetch } = useCentrosCusto(token, {
+  const { data, isLoading, error, refetch } = useCostCenters({
     page,
-    pageSize,
-    ativo: ativoFilter,
+    size: pageSize,
+    active: ativoFilter,
     search: searchTerm || undefined,
   });
 
@@ -75,8 +75,8 @@ export const SiengeCentrosCusto: React.FC<SiengeCentrosCustoProps> = ({ token })
     );
   }
 
-  const centrosCusto = data?.data || [];
-  const pagination = data?.pagination;
+  const centrosCusto = data?.content || [];
+  const pagination = data;
 
   return (
     <div className="space-y-6">
