@@ -21,7 +21,7 @@ import {
   AlertTriangle,
   XCircle
 } from 'lucide-react';
-import { useLancamentos } from '@/hooks/useSiengeData';
+import { useBillDebts } from '@/hooks/useSiengeData';
 
 interface SiengeLancamentosProps {
   token: string;

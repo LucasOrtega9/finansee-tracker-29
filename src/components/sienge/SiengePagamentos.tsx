@@ -17,7 +17,7 @@ import {
   CheckCircle,
   Clock
 } from 'lucide-react';
-import { usePagamentos } from '@/hooks/useSiengeData';
+import { usePayments } from '@/hooks/useSiengeData';
 
 interface SiengePagamentosProps {
   token: string;

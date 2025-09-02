@@ -13,7 +13,7 @@ interface UseSiengeAuthReturn {
 }
 
 export const useSiengeAuth = (): UseSiengeAuthReturn => {
-  const [auth, setAuth] = useState<SiengeAuth | null>(() => {
+  const [auth, setAuth] = useState<(SiengeAuth & { timestamp: number }) | null>(() => {
     // Tentar recuperar token do localStorage
     const stored = localStorage.getItem('sienge_auth');
     if (stored) {

@@ -17,7 +17,7 @@ import {
   CheckCircle,
   XCircle
 } from 'lucide-react';
-import { useFornecedores } from '@/hooks/useSiengeData';
+import { useSuppliers } from '@/hooks/useSiengeData';
 
 interface SiengeFornecedoresProps {
   token: string;

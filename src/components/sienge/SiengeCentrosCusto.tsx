@@ -15,7 +15,7 @@ import {
   XCircle,
   ChevronRight
 } from 'lucide-react';
-import { useCentrosCusto } from '@/hooks/useSiengeData';
+import { useCostCenters } from '@/hooks/useSiengeData';
 
 interface SiengeCentrosCustoProps {
   token: string;
