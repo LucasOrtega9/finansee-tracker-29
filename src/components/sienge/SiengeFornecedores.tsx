@@ -147,7 +147,7 @@ export const SiengeFornecedores: React.FC<SiengeFornecedoresProps> = ({ token })
         <CardHeader>
           <CardTitle>Lista de Fornecedores</CardTitle>
           <CardDescription>
-            {pagination ? `${pagination.total} fornecedores encontrados` : 'Carregando...'}
+            {pagination ? `${pagination.totalElements} fornecedores encontrados` : 'Carregando...'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -275,8 +275,8 @@ export const SiengeFornecedores: React.FC<SiengeFornecedoresProps> = ({ token })
               
               <div className="text-center text-sm text-gray-600 mt-2">
                 Página {page} de {pagination.totalPages} • 
-                {pagination.total} fornecedores • 
-                {pagination.pageSize} por página
+                {pagination.totalElements} fornecedores • 
+                {pagination.size} por página
               </div>
             </div>
           )}

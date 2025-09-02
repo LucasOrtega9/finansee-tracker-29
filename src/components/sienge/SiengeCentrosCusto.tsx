@@ -138,7 +138,7 @@ export const SiengeCentrosCusto: React.FC<SiengeCentrosCustoProps> = ({ token })
         <CardHeader>
           <CardTitle>Lista de Centros de Custo</CardTitle>
           <CardDescription>
-            {pagination ? `${pagination.total} centros de custo encontrados` : 'Carregando...'}
+            {pagination ? `${pagination.totalElements} centros de custo encontrados` : 'Carregando...'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -251,8 +251,8 @@ export const SiengeCentrosCusto: React.FC<SiengeCentrosCustoProps> = ({ token })
               
               <div className="text-center text-sm text-gray-600 mt-2">
                 Página {page} de {pagination.totalPages} • 
-                {pagination.total} centros de custo • 
-                {pagination.pageSize} por página
+                {pagination.totalElements} centros de custo • 
+                {pagination.size} por página
               </div>
             </div>
           )}

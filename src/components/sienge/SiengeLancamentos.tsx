@@ -220,7 +220,7 @@ export const SiengeLancamentos: React.FC<SiengeLancamentosProps> = ({ token }) =
         <CardHeader>
           <CardTitle>Lista de Lançamentos</CardTitle>
           <CardDescription>
-            {pagination ? `${pagination.total} lançamentos encontrados` : 'Carregando...'}
+            {pagination ? `${pagination.totalElements} lançamentos encontrados` : 'Carregando...'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -351,8 +351,8 @@ export const SiengeLancamentos: React.FC<SiengeLancamentosProps> = ({ token }) =
               
               <div className="text-center text-sm text-gray-600 mt-2">
                 Página {page} de {pagination.totalPages} • 
-                {pagination.total} lançamentos • 
-                {pagination.pageSize} por página
+                {pagination.totalElements} lançamentos • 
+                {pagination.size} por página
               </div>
             </div>
           )}

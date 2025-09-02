@@ -3,9 +3,9 @@ import { SiengeConfig } from '../types/sienge';
 // Configuração da API do Sienge baseada na documentação oficial
 // https://api.sienge.com.br/docs/#/bill-debt-v1
 export const siengeConfig: SiengeConfig = {
-  baseUrl: process.env.VITE_SIENGE_API_URL || 'https://api.sienge.com.br',
-  clientId: process.env.VITE_SIENGE_CLIENT_ID || '',
-  clientSecret: process.env.VITE_SIENGE_CLIENT_SECRET || '',
+  baseUrl: import.meta.env.VITE_SIENGE_API_URL || 'https://api.sienge.com.br',
+  clientId: import.meta.env.VITE_SIENGE_CLIENT_ID || '',
+  clientSecret: import.meta.env.VITE_SIENGE_CLIENT_SECRET || '',
   timeout: 30000, // 30 segundos
 };
 

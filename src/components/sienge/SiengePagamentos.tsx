@@ -158,7 +158,7 @@ export const SiengePagamentos: React.FC<SiengePagamentosProps> = ({ token }) => 
         <CardHeader>
           <CardTitle>Lista de Pagamentos</CardTitle>
           <CardDescription>
-            {pagination ? `${pagination.total} pagamentos encontrados` : 'Carregando...'}
+            {pagination ? `${pagination.totalElements} pagamentos encontrados` : 'Carregando...'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -289,8 +289,8 @@ export const SiengePagamentos: React.FC<SiengePagamentosProps> = ({ token }) => 
               
               <div className="text-center text-sm text-gray-600 mt-2">
                 Página {page} de {pagination.totalPages} • 
-                {pagination.total} pagamentos • 
-                {pagination.pageSize} por página
+                {pagination.totalElements} pagamentos • 
+                {pagination.size} por página
               </div>
             </div>
           )}
